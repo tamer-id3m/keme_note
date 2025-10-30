@@ -1,25 +1,25 @@
 <?php
 
-namespace App\Services\V4\OnDemandSmartNote;
+namespace App\Services\OnDemandSmartNote;
 
 use App\Models\User;
 use App\Helpers\Helpers;
 use App\Enums\QueueStatus;
 use App\Traits\QueueTrait;
-use App\Models\v3\QueueList;
+use App\Models\QueueList;
 use Illuminate\Http\Request;
 use App\Traits\ApiResponseTrait;
 use Illuminate\Http\JsonResponse;
 use App\Services\AI\OpenAIService;
 use Illuminate\Support\Facades\Log;
-use App\Models\v3\OnDemandSmartNote;
+use App\Models\OnDemandSmartNote;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use App\Jobs\ProcessOnDemandSmartNote;
 use Elastic\ScoutDriverPlus\Support\Query;
 use App\Services\V4\AiNote\AiNoteServiceInterface;
 use Elastic\ScoutDriverPlus\Builders\BoolQueryBuilder;
-use App\Http\Resources\V4\OnDemandSmartNote\OnDemandSmartNoteResource;
+use App\Http\Resources\OnDemandSmartNote\OnDemandSmartNoteResource;
 
 /**
  * Class OnDemandSmartNoteService
@@ -487,7 +487,7 @@ class OnDemandSmartNoteService
      * This method loops through all queues and returns the sequential position of the user’s queue entry.
      *
      * @param \Illuminate\Support\Collection $allQueues All queue entries related to the note.
-     * @param \App\Models\v3\QueueList $userQueue The specific queue item for the current user.
+     * @param \App\Models\QueueList $userQueue The specific queue item for the current user.
      *
      * @return int|null The position/order of the user's queue, or null if not found.
      */
@@ -512,7 +512,7 @@ class OnDemandSmartNoteService
      * It also creates an initial queue entry for the current user.
      *
      * @param \Illuminate\Http\Request $request The current request containing input data.
-     * @param \App\Models\v3\OnDemandSmartNote $onDemandSmartNote The smart note being processed.
+     * @param \App\Models\OnDemandSmartNote $onDemandSmartNote The smart note being processed.
      *
      * @return void
      */
@@ -531,7 +531,7 @@ class OnDemandSmartNoteService
      * This method fills missing or optional fields with fallback values from the existing note.
      * It also handles special cases like 'none' patient ID or missing context2.
      *
-     * @param \App\Models\v3\OnDemandSmartNote $onDemandSmartNote The note used as reference for default values.
+     * @param \App\Models\OnDemandSmartNote $onDemandSmartNote The note used as reference for default values.
      *
      * @return void
      */

@@ -14,9 +14,9 @@ use Elastic\ScoutDriverPlus\Support\Query;
 use App\Services\Notification\NotifyUserService;
 use Elastic\ScoutDriverPlus\Builders\BoolQueryBuilder;
 use App\Services\InternalNote\NotifyInternalNoteService;
-use App\Http\Resources\V4\InternalNote\InternalNoteResource;
-use App\Http\Resources\V3\InternalNote\InternalNoteHistoryResource;
-use App\Http\Resources\V4\InternalNote\InternalNoteWithCommentsResource;
+use App\Http\Resources\InternalNote\InternalNoteResource;
+use App\Http\Resources\InternalNote\InternalNoteHistoryResource;
+use App\Http\Resources\InternalNote\InternalNoteWithCommentsResource;
 
 /**
  * Class InternalNoteCrudOperationsService

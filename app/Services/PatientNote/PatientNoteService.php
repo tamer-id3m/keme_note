@@ -5,10 +5,10 @@ namespace App\Services\V4\PatientNote;
 use App\Models\User;
 use App\Enums\RoleType;
 use App\Helpers\Helpers;
-use App\Models\v3\ClinicalNote;
+use App\Models\ClinicalNote;
 use App\Traits\ApiResponseTrait;
 use Illuminate\Support\Facades\Cache;
-use App\Http\Resources\V4\ClinicalNote\ClinicalNoteResource;
+use App\Http\Resources\ClinicalNote\ClinicalNoteResource;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\DB;
 

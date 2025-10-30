@@ -3,18 +3,18 @@
 namespace App\Services\InternalNoteComment;
 
 use App\Models\User;
-use App\Models\v3\Clinic;
-use App\Models\v3\Patient;
+use App\Models\Clinic;
+use App\Models\Patient;
 use App\Models\InternalNote;
-use App\Models\v3\NoteComment;
+use App\Models\NoteComment;
 use App\Traits\ApiResponseTrait;
-use App\Models\v3\CommentHistory;
+use App\Models\CommentHistory;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use App\Services\Notification\NotifyUserService;
-use App\Http\Resources\V3\InternalNote\InternalNoteHistoryResource;
-use App\Http\Resources\V4\InternalNoteComment\InternalNoteCommentResource;
+use App\Http\Resources\InternalNote\InternalNoteHistoryResource;
+use App\Http\Resources\InternalNoteComment\InternalNoteCommentResource;
 
 /**
  * Class InternalNoteCommentCrudService

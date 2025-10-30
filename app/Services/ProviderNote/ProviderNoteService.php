@@ -4,14 +4,14 @@ namespace App\Services\V4\ProviderNote;
 
 use App\Enums\RoleType;
 use App\Helpers\Helpers;
-use App\Http\Requests\V4\ProviderNote\ProviderNote\StoreProviderNoteRequest;
-use App\Http\Requests\V4\ProviderNote\ProviderNote\UpdateProviderNoteRequest;
-use App\Http\Resources\V4\ProviderNote\ProviderNoteHistoryResource;
-use App\Http\Resources\V4\ProviderNote\ProviderNoteResource;
+use App\Http\Requests\ProviderNote\ProviderNote\StoreProviderNoteRequest;
+use App\Http\Requests\ProviderNote\ProviderNote\UpdateProviderNoteRequest;
+use App\Http\Resources\ProviderNote\ProviderNoteHistoryResource;
+use App\Http\Resources\ProviderNote\ProviderNoteResource;
 use App\Models\ProviderNoteHistory;
 use App\Models\User;
 use App\Models\v3\Patient;
-use App\Models\v3\ProviderNote;
+use App\Models\ProviderNote;
 use App\Services\Notification\NotifyUserService;
 use App\Traits\ApiResponseTrait;
 use Illuminate\Http\Request;
@@ -120,7 +120,7 @@ class ProviderNoteService
      *
      * This method validates the input data and creates a new provider note for the patient.
      *
-     * @param  \App\Http\Requests\V3\ProviderNpte\ProviderNote\StoreProviderNoteRequest  $request  The validated request data.
+     * @param  \App\Http\Requests\ProviderNpte\ProviderNote\StoreProviderNoteRequest  $request  The validated request data.
      * @return \Illuminate\Http\Response The response containing the created note data.
      */
     public function store(StoreProviderNoteRequest $request)
@@ -195,7 +195,7 @@ class ProviderNoteService
      *
      * This method validates the input data and updates the specified note's body.
      *
-     * @param  \App\Http\Requests\V3\ProviderNpte\ProviderNote\UpdateProviderNoteRequest  $request  The validated request data.
+     * @param  \App\Http\Requests\ProviderNote\ProviderNote\UpdateProviderNoteRequest  $request  The validated request data.
      * @param  int  $id  The ID of the note to update.
      * @return \Illuminate\Http\Response The response containing the updated note data.
      */

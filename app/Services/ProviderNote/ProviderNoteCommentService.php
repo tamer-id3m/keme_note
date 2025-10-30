@@ -1,13 +1,13 @@
 <?php
 
-namespace App\Services\V4\ProviderNote;
+namespace App\Services\ProviderNote;
 
-use App\Http\Resources\V4\ProviderNote\ProviderCommentHistoryResource;
-use App\Http\Resources\V4\ProviderNote\ProviderNoteCommentResource;
+use App\Http\Resources\ProviderNote\ProviderCommentHistoryResource;
+use App\Http\Resources\ProviderNote\ProviderNoteCommentResource;
 use App\Models\ProviderNoteComment;
 use App\Models\ProviderNoteCommentHistory;
 use App\Models\User;
-use App\Models\v3\ProviderNote;
+use App\Models\ProviderNote;
 use App\Services\Notification\NotifyUserService;
 use App\Traits\ApiResponseTrait;
 use Illuminate\Support\Facades\Auth;

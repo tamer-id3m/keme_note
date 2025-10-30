@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Resources\V4\InternalNote;
+namespace App\Http\Resources\InternalNote;
 
 use App\Services\Timezone\TimezoneService;
 use Illuminate\Http\Resources\Json\JsonResource;

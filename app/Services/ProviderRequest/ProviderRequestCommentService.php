@@ -1,11 +1,11 @@
 <?php
 
-namespace App\Services\V4\ProviderRequest;
+namespace App\Services\ProviderRequest;
 
-use App\Http\Resources\V3\ProviderRequestCommentHistoryResource;
-use App\Http\Resources\V4\ProviderRequest\ProviderRequestCommentResource;
-use App\Models\v3\ProviderRequestComment;
-use App\Models\v3\ProviderRequestCommentHistory;
+use App\Http\Resources\ProviderRequestCommentHistoryResource;
+use App\Http\Resources\ProviderRequest\ProviderRequestCommentResource;
+use App\Models\ProviderRequestComment;
+use App\Models\ProviderRequestCommentHistory;
 use App\Traits\ApiResponseTrait;
 use Illuminate\Support\Facades\Auth;
 
@@ -63,7 +63,7 @@ class ProviderRequestCommentService
     /**
      * Store a newly created provider request comment.
      *
-     * @param  \App\Http\Requests\V3\ProviderRequest\ProviderRequestComments\StoreProviderRequestComment  $request
+     * @param  \App\Http\Requests\ProviderRequest\ProviderRequestComments\StoreProviderRequestComment  $request
      * @return \Illuminate\Http\JsonResponse
      *                                       - Success: Returns the created provider request comment.
      *                                       - Error: Returns a 500 response if the comment creation fails.
@@ -87,7 +87,7 @@ class ProviderRequestCommentService
     /**
      * Update an existing provider request comment.
      *
-     * @param  \App\Http\Requests\V3\ProviderRequest\ProviderRequestComments\UpdateProviderRequestComment  $request
+     * @param  \App\Http\Requests\ProviderRequest\ProviderRequestComments\UpdateProviderRequestComment  $request
      * @param  string  $id  The UUID of the provider request comment to be updated.
      * @return \Illuminate\Http\JsonResponse
      *                                       - Success: Returns the updated provider request comment.
@@ -158,7 +158,7 @@ class ProviderRequestCommentService
      * Find a provider request comment by UUID.
      *
      * @param  string  $id  The UUID of the provider request comment.
-     * @return \App\Models\v3\ProviderRequestComment|null
+     * @return \App\Models\ProviderRequestComment|null
      */
     private function findComment($id)
     {
