@@ -67,49 +67,50 @@ class Helpers
         return in_array($permission->id, $role->permissions()->pluck('id')->toArray()) ? 'checked' : '';
     }
 
-    public static function sendMail($header, $body, $to, $name = 'partner')
-    {
+ public static function sendMail($header, $body, $to, $name = 'partner')
+{
+    $sendgridApiKey = env('SENDGRID_API_KEY');
+    
+    $headers = [
+        'Authorization: Bearer ' . $sendgridApiKey,
+        'Content-Type: application/json',
+    ];
 
-        $headers = [
-            'Authorization: Bearer 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',
-            'Content-Type: application/json',
-        ];
-
-        $data = [
-            'personalizations' => [
-                [
-                    'to' => [
-                        [
-                            'email' => $to,
-                            'name' => $name,
-                        ],
+    $data = [
+        'personalizations' => [
+            [
+                'to' => [
+                    [
+                        'email' => $to,
+                        'name' => $name,
                     ],
                 ],
             ],
-            'from' => [
-                'email' => 'abgegypt@abgegypt.com',
+        ],
+        'from' => [
+            'email' => 'abgegypt@abgegypt.com',
+        ],
+        'subject' => $header,
+        'content' => [
+            [
+                'type' => 'text/html',
+                'value' => '<h1>' . $body . '</h1>',
             ],
-            'subject' => $header,
-            'content' => [
-                [
-                    'type' => 'text/html',
-                    'value' => '<h1>' . $body . '</h1>',
-                ],
-            ],
-        ];
+        ],
+    ];
 
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, 'https://api.sendgrid.com/v3/mail/send');
-        curl_setopt($ch, CURLOPT_POST, 1);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
-        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-        $response = curl_exec($ch);
-        curl_close($ch);
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, 'https://api.sendgrid.com/v3/mail/send');
+    curl_setopt($ch, CURLOPT_POST, 1);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+    curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+    $response = curl_exec($ch);
+    curl_close($ch);
 
-        return print_r($response);
-    }
+    return print_r($response);
+}
 
     public static function getPaginationAndSorting(Request $request)
     {
@@ -166,4 +167,4 @@ class Helpers
             'last_page' => $items->lastPage(),
         ];
     }
-}
+} 
