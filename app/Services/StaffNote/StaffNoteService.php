@@ -4,9 +4,9 @@ namespace App\Services\StaffNote;
 
 use App\Events\Notification;
 use App\Helpers\Helpers;
-use App\Http\Resources\V3\StaffNote\StaffNoteResource;
+use App\Http\Resources\StaffNote\StaffNoteResource;
 use App\Models\User;
-use App\Models\v3\StaffNote;
+use App\Models\StaffNote;
 use App\Notifications\MentionNotification;
 use App\Traits\ApiResponseTrait;
 use Illuminate\Support\Facades\Auth;
