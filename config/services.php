@@ -34,5 +34,9 @@ return [
             'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
         ],
     ],
+    'user_service' => [
+        'url'   => env('USER_SERVICE_URL', 'http://keme_user.test'),
+        'token' => env('INTERNAL_API_TOKEN', 'super-secret-shared-token'),
+    ],
 
 ];
