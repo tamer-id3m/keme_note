@@ -2,418 +2,400 @@
 
 namespace App\Services\ClinicalNotes;
 
+use App\Http\Resources\ClinicalNote\ClinicalNoteResource;
+use App\Models\ClinicalNote;
 use App\Models\Dose;
 use App\Models\NoteLab;
-use App\Models\v3\Patient;
-use App\Models\ClinicalNote;
+use App\Models\NoteMedication;
 use App\Traits\ApiResponseTrait;
-use App\Models\v3\NoteMedication;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Cache;
+use App\Http\Clients\UserClient;
+use Carbon\Carbon;
 use DateTime;
-use App\Http\Resources\ClinicalNote\ClinicalNoteResource;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;
 
 class ClinicalNotesService
 {
+    use ApiResponseTrait;
 
-use ApiResponseTrait;
+    protected $userClient;
 
-/**
- * Display a specific clinical note with its related entities.
- *
- * @param  int  $id  The ID of the clinical note to retrieve.
- * @return \Illuminate\Http\JsonResponse
- */
-public function show($id)
-{
-    $note = ClinicalNote::with([
-            'aiNote',
-            'aiNote.approver',
-            'doctor'
-        ])
-        ->find($id);
-
-    if (!$note) {
-        return $this->apiResponse(
-            'Clinical Note not found',
-            404
-        );
+    public function __construct(UserClient $userClient)
+    {
+        $this->userClient = $userClient;
     }
 
-    return $this->apiResponse(
-        'Clinical Note retrieved successfully',
-        200,
-        new ClinicalNoteResource($note)
-    );
-}
+    /**
+     * Retrieve a specific clinical note.
+     */
+    public function show($id)
+    {
+        $note = ClinicalNote::with(['aiNote', 'aiNote.approver', 'doctor','patients.clinic',
+        'patients.doctor'])->find($id);
+        if (! $note) {
+            return $this->ApiResponse('Clinical Note not found', 404);
+        }
 
-
-/**
- * Store a newly created clinical note and attach related labs and medications.
- *
- * @param  \Illuminate\Http\Request  $request  The request containing clinical note data.
- * @return \Illuminate\Http\JsonResponse
- */
-public function store($request)
-{
-    DB::beginTransaction();
-
-    try {
-        $note = $this->createClinicalNote($request);
-        $this->attachLabsToNote($request, $note);
-        $this->attachMedicationsToNote($request, $note);
-
-        DB::commit();
-
-        return $this->apiResponse(
-            __('clinical_note.created_successfully'),
-            201,
-            new ClinicalNoteResource($note)
-        );
-    } catch (\Throwable $e) {
-        DB::rollBack();
-         return $this->ApiResponse('An error occurred while creating the clinical note.', 500, [
-            'error' => $e->getMessage()
-        ]);
+        // Enrich with external data
+        $enrichedNote = $this->enrichWithExternalData($note);
+        
+        return $this->ApiResponse('success', 200, new ClinicalNoteResource($enrichedNote));
     }
-}
 
+    /**
+     * Enrich note with data from User Service
+     */
 /**
- * Create a new clinical note and perform associated actions like updating patient status and clearing cache.
- *
- * @param  \Illuminate\Http\Request  $request
- * @return \App\Models\ClinicalNote
+ * Enrich note with data from User Service and prepare all resource data
  */
-protected function createClinicalNote($request): ClinicalNote
+private function enrichWithExternalData($note)
 {
-    $note = ClinicalNote::create($this->prepareNoteData($request));
+    // Get patient info from User Service
+    $patientUser = $this->userClient->getPatientById($note->patient_id);
+    
+    // Get doctor info from User Service
+    $doctorUser = $this->userClient->getDoctorById($note->doctor_id);
+    
+    // Get labs data (these should be local to Clinical Notes service)
+    $labIds = $note->labs->pluck('id')->toArray();
+    $labs = $note->labs;
+    
+    // Get medications data (these should be local to Clinical Notes service)
+    $medicationIds = $note->medications->pluck('id')->toArray();
+    $medications = $note->medications;
 
-    $this->updatePatientStatus($note->patient_id);
-    $this->clearClinicalNotesCache();
+    // Prepare view data
+    $labsView = $labs->pluck('name')->map(fn($name) => " -{$name}")->implode('');
+    $medicationsView = $medications->map(fn($med) => " -{$med->name} {$med->dosage}")->implode('');
+
+    // Add all the data needed for the resource
+    if ($patientUser) {
+        $note->patient_full_name = $patientUser->name . ' ' . $patientUser->last_name;
+        $note->patient_photo = $patientUser->photo;
+        $note->patient_clinic = $patientUser->clinic_id ? 'Clinic #' . $patientUser->clinic_id : null;
+        $note->pat_id = $patientUser->patient_id;
+        $note->pat_date = $patientUser->birth_date;
+        
+        // If patient has a doctor in User Service, use that
+        if ($patientUser->doctor_id) {
+            $patientDoctor = $this->userClient->getDoctorById($patientUser->doctor_id);
+            $note->patient_doctor = $patientDoctor ? ($patientDoctor->name . ' ' . $patientDoctor->last_name) : null;
+        }
+    }
+
+    if ($doctorUser) {
+        $note->user_full_name = $doctorUser->name . ' ' . $doctorUser->last_name;
+        $note->user_photo = $doctorUser->photo;
+    }
+
+    // Add labs and medications data
+    $note->labs1 = $labs;
+    $note->lap = $labIds;
+    $note->labsView = $labsView;
+    $note->medicationsView = $medicationsView;
+    $note->medication = $note->medications; // This should be your local medication relationship
 
     return $note;
 }
 
-/**
- * Prepare data for clinical note creation.
- *
- * @param \Illuminate\Http\Request $request
- **/
-protected function prepareNoteData($request)
-{
-    $patient = Patient::find($request->patient_id);
-    if (!$patient) {
-        throw new \Exception('Patient not found');
+    /**
+     * Store a new clinical note along with related labs and medications.
+     */
+    public function store($request)
+    {
+        try {
+            DB::beginTransaction();
+            
+            // Validate patient exists in User Service
+            $patientUser = $this->userClient->getPatientById($request->patient_id);
+            if (!$patientUser) {
+                return $this->ApiResponse('Patient not found in User Service', 404);
+            }
+
+            $note = $this->createClinicalNoteRecord($request);
+            $this->processLabs($request, $note);
+            $this->processMedications($request, $note);
+
+            DB::commit();
+
+            return $this->ApiResponse(__('Added Successfully'), 200);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error storing clinical note: ' . $e->getMessage());
+
+            return $this->ApiResponse('Something went wrong.', 500);
+        }
     }
-    return [
-        'subjective' => $request->subjective,
-        'chief_complaint' => $request->chief_complaint,
-        'history_of_present_illness' => $request->history_of_present_illness,
-        'current_medications' => $request->current_medications,
-        'diagnosis' => $request->diagnosis,
-        'assessments' => $request->assessments,
-        'plan' => $request->plan,
-        'procedures' => $request->procedures,
-        'medications' => $request->medications,
-        'risks_benefits_discussion' => $request->risks_benefits_discussion,
-        'care_plan' => $request->care_plan,
-        'next_follow_up' => $request->next_follow_up,
-        'next_follow_up_value' => $request->next_follow_up_value,
-        'next_follow_up_timeframe' => $request->next_follow_up_timeframe,
-        'date' => now(),
-        'patient_id' => $patient->id,
-        'doctor_id' => $patient->doctor_id,
-        'is_shared' => false,
-        'resource' => 'clinical_note',
-    ];
-}
 
-/**
- * Update patient status to FollowUp.
- *
- * @param int $patientId
- * @return void
- */
-protected function updatePatientStatus(int $patientId): void
-{
-    Patient::where('id', $patientId)->update(['type' => 'FollowUp']);
-}
+    /**
+     * Create a clinical note record.
+     */
+    private function createClinicalNoteRecord($request)
+    {
+        $data = [
+            'subjective' => $request->subjective,
+            'chief_complaint' => $request->chief_complaint,
+            'history_of_present_illness' => $request->history_of_present_illness,
+            'current_medications' => $request->current_medications,
+            'diagnosis' => $request->diagnosis,
+            'assessments' => $request->assessments,
+            'plan' => $request->plan,
+            'procedures' => $request->procedures,
+            'medications' => $request->medications,
+            'risks_benefits_discussion' => $request->risks_benefits_discussion,
+            'care_plan' => $request->care_plan,
+            'next_follow_up' => $request->next_follow_up,
+            'next_follow_up_value' => $request->next_follow_up_value,
+            'next_follow_up_timeframe' => $request->next_follow_up_timeframe,
+            'date' => Carbon::now(),
+            'patient_id' => $request->patient_id,
+            'doctor_id' => auth()->user()->id,
+            'is_shared' => false,
+            'resource' => 'clinical_note',
+        ];
+        $note = ClinicalNote::create($data);
+        Cache::tags(['clinical_notes'])->flush();
 
-/**
- * Clear clinical notes cache.
- *
- * @return void
- */
-protected function clearClinicalNotesCache(): void
-{
-    Cache::tags(['clinical_notes'])->flush();
-}
+        // Update patient status in User Service
+        $this->userClient->updatePatientType($request->patient_id, 'FollowUp');
 
-/**
- * Attach labs to the clinical note.
- *
- * @param \Illuminate\Http\Request $request
- * @param \App\Models\ClinicalNote $note
- * @return void
- */
-protected function attachLabsToNote($request, ClinicalNote $note): void
-{
-    foreach ($request->input('lab', []) as $labId) {
-        NoteLab::create([
-            'note_id' => $note->id,
-            'lab_id' => $labId,
-        ]);
+        return $note;
     }
-}
 
-/**
- * Attach medications to the clinical note.
- *
- * @param \Illuminate\Http\Request $request
- * @param \App\Models\ClinicalNote $note
- * @return void
- */
-protected function attachMedicationsToNote($request, ClinicalNote $note): void
-{
-    foreach ($request->input('medication', []) as $dosageId) {
-        NoteMedication::create([
-            'note_id'       => $note->id,
-            'mediction_id' => Dose::where('id', $dosageId)->value('medication_id'),
-            'dosage_id'     => $dosageId,
-        ]);
+    /**
+     * Process lab records associated with the clinical note.
+     */
+    private function processLabs($request, $note)
+    {
+        if ($request->has('lab')) {
+            foreach ($request->input('lab') as $val) {
+                NoteLab::create(
+                    [
+                        'note_id' => $note->id,
+                        'lab_id' => $val,
+                    ]
+                );
+            }
+        }
     }
-}
-/**
- * Delete the specified clinical note along with its related labs and medications.
- *
- * @param  int  $id
- * @return \Illuminate\Http\JsonResponse
- */
 
-public function destroy($id)
-{
-    DB::beginTransaction();
+    /**
+     * Process medication records associated with the clinical note.
+     */
+    private function processMedications($request, $note)
+    {
+        if ($request->has('medication')) {
+            foreach ($request->input('medication') as $mediction) {
+                $medicationId = Dose::where('id', $mediction)->value('medication_id');
 
-    try {
-        $note = ClinicalNote::find($id);
+                NoteMedication::create([
+                    'note_id' => $note->id,
+                    'mediction_id' => $medicationId,
+                    'dosage_id' => $mediction,
+                ]);
+            }
+        }
+    }
 
-        if (!$note) {
-            return $this->apiResponse(
-                'clinical note not found',
-                404
-            );
+    /**
+     * Update an existing clinical note along with related labs and medications.
+     */
+    public function update($request, $id)
+    {
+        try {
+            DB::beginTransaction();
+            $note = ClinicalNote::find($id);
+            if (! $note) {
+                return $this->ApiResponse('Clinical Note not found', 404);
+            }
+
+            $formattedDate = DateTime::createFromFormat('m-d-y', $note->date)->format('Y-m-d');
+            $note->update($this->getUpdateData($request, $formattedDate));
+            $this->updateNoteLabs($request->lab, $note->id);
+            $this->updateNoteMedications($request->input('medication'), $note->id);
+            Cache::tags(['clinical_notes'])->flush();
+
+            DB::commit();
+
+            return $this->ApiResponse(__('Updated Successfully'), 200, new ClinicalNoteResource($note));
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return $this->ApiResponse('Something went wrong.', 500, $e->getMessage());
+        }
+    }
+
+    /**
+     * Retrieve the data for updating a clinical note.
+     */
+    private function getUpdateData($request, $date)
+    {
+        return $request->only([
+            'subjective',
+            'chief_complaint',
+            'history_of_present_illness',
+            'current_medications',
+            'diagnosis',
+            'assessments',
+            'plan',
+            'procedures',
+            'medications',
+            'risks_benefits_discussion',
+            'care_plan',
+            'next_follow_up',
+            'next_follow_up_value',
+            'next_follow_up_timeframe',
+            'patient_id',
+        ]) + ['date' => $date];
+    }
+
+    /**
+     * Update the labs associated with a clinical note.
+     */
+    private function updateNoteLabs($labs, $noteId)
+    {
+        if ($labs !== null) {
+            NoteLab::where('note_id', $noteId)->delete();
+
+            foreach ($labs as $labId) {
+                NoteLab::create(['note_id' => $noteId, 'lab_id' => $labId]);
+            }
+        }
+    }
+
+    /**
+     * Update the medications associated with a clinical note.
+     */
+    private function updateNoteMedications($medictions, $noteId)
+    {
+
+        if (! empty($medictions)) {
+            NoteMedication::where('note_id', $noteId)->delete();
+
+            foreach ($medictions as $dosageId) {
+                $medicationId = Dose::where('id', $dosageId)->value('medication_id');
+
+                NoteMedication::create([
+                    'note_id' => $noteId,
+                    'mediction_id' => $medicationId,
+                    'dosage_id' => $dosageId,
+                ]);
+            }
+        }
+    }
+
+    /**
+     * Delete a clinical note along with its related labs and medications.
+     */
+    public function destroy($id)
+    {
+        try {
+            DB::beginTransaction();
+            $note = ClinicalNote::find($id);
+            if (! $note) {
+                return $this->ApiResponse('Clinical Note not found', 404);
+            }
+
+            $note->labs()->detach();
+            $note->medications()->detach();
+            $note->delete();
+            Cache::tags(['clinical_notes'])->flush();
+
+            DB::commit();
+
+            return $this->ApiResponse('Note and related details deleted successfully', 200);
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return $this->ApiResponse('Something went wrong.', 500, $e->getMessage());
+        }
+    }
+
+    /**
+     * Toggle the sharing status of a clinical note.
+     */
+    public function shareStatus($id)
+    {
+
+        $note = ClinicalNote::findOrFail($id);
+
+        $this->toggleNoteSharing($note);
+
+        if ($note->is_shared) {
+            $this->updatePatientType($note->patient_id);
         }
 
-        $this->deleteNoteRelations($note);
-        $note->delete();
-        $this->clearClinicalNotesCache();
+        $message = $note->is_shared ? __('Status Activated Successfully') : __('Status Deactivated Successfully');
+        Cache::tags(['clinical_notes'])->flush();
 
-        DB::commit();
-
-        return $this->apiResponse(
-            'clinical note deleted successfully',
-            200
-        );
-    } catch (\Exception $e) {
-        DB::rollBack();
-        return $this->ApiResponse('Failed to delete clinical note.', 500, [
-            'error' => $e->getMessage()
-        ]);
+        return $this->ApiResponse($message, 200);
     }
-}
 
-/**
- * Detach all related labs and medications from the clinical note.
- *
- * @param  \App\Models\ClinicalNote  $note
- * @return void
- */
-protected function deleteNoteRelations(ClinicalNote $note): void
-{
-    $note->labs()->detach();
-    $note->medications()->detach();
-}
-/**
- * Toggle the shared status of a clinical note and update patient type if applicable.
- *
- * @param  int  $id
- * @return \Illuminate\Http\JsonResponse
- */
-public function shareStatus($id)
-{
-    $note = ClinicalNote::find($id);
-
-    if (!$note) {
-            return $this->apiResponse(
-                'clinical note not found',
-                404
-            );
+    /**
+     * Toggle the is_shared status of a clinical note.
+     */
+    private function toggleNoteSharing(ClinicalNote $note)
+    {
+        if (! $note->is_shared && $note->doctor_id === null) {
+            $note->doctor_id = auth()->user()->id;
         }
 
-    $this->toggleNoteSharing($note);
-
-    if ($note->is_shared) {
-        $this->updatePatientType($note->patient_id);
+        $note->is_shared = ! $note->is_shared;
+        $note->save();
     }
 
-    $this->clearClinicalNotesCache();
-
-    return $this->apiResponse(
-        $note->is_shared
-            ? __('The clinical note is shared successfully')
-            : __('The clinical note is not shared successfully'),
-        200
-    );
-}
-
-/**
- * Toggle the `is_shared` flag of a clinical note and set doctor ID if missing.
- *
- * @param  \App\Models\ClinicalNote  $note
- * @return void
- */
-private function toggleNoteSharing(ClinicalNote $note): void
-{
-    if (!$note->is_shared && is_null($note->doctor_id)) {
-        $note->doctor_id = auth()->id();
+    /**
+     * Update the type of a patient based on the clinical note's action.
+     */
+    private function updatePatientType($patientId)
+    {
+        // Update patient status in User Service
+        $this->userClient->updatePatientType($patientId, 'FollowUp');
     }
 
-    $note->is_shared = !$note->is_shared;
-    $note->save();
-}
-/**
- * Update the patient type from "New" to "FollowUp" if applicable.
- *
- * @param  int  $patientId
- * @return void
- */
+    // ========== INTERNAL SERVICE METHODS ==========
 
-private function updatePatientType(int $patientId): void
-{
-    Patient::where('id', $patientId)
-        ->where('type', 'New')
-        ->update(['type' => 'FollowUp']);
-}
-/**
- * Update the specified clinical note with new data, labs, and medications.
- *
- * @param  \Illuminate\Http\Request  $request
- * @param  int  $id  The ID of the clinical note.
- * @return \Illuminate\Http\JsonResponse
- */
-public function update($request, int $id)
-{
-    DB::beginTransaction();
+    /**
+     * Get clinical notes by patient ID
+     */
+    public function getByPatientId($patientId)
+    {
+        return ClinicalNote::where('patient_id', $patientId)
+            ->with(['labs', 'medications'])
+            ->get();
+    }
 
-    try {
-        $note = ClinicalNote::find($id);
+    /**
+     * Get multiple clinical notes by IDs
+     */
+    public function getByIds(array $ids)
+    {
+        return ClinicalNote::whereIn('id', $ids)
+            ->with(['labs', 'medications'])
+            ->get();
+    }
 
-        if (! $note) {
-            return $this->apiResponse('Clinical Note not found', 404);
+    /**
+     * Delete clinical notes by patient ID
+     */
+    public function deleteByPatientId($patientId)
+    {
+        $notes = ClinicalNote::where('patient_id', $patientId)->get();
+        $count = $notes->count();
+        
+        foreach ($notes as $note) {
+            $this->destroy($note->id);
         }
-
-        $formattedDate = $this->formatDate($note->date);
-
-        $note->update($this->prepareUpdateData($request, $formattedDate));
-
-        $this->syncNoteLabs($request->lab, $note->id);
-        $this->syncNoteMedications($request->input('medication'), $note->id);
-
-        $this->clearClinicalNotesCache();
-
-        DB::commit();
-
-        return $this->apiResponse(__('Updated Successfully'), 200, new ClinicalNoteResource($note));
-    } catch (\Throwable $e) {
-        DB::rollBack();
-        return $this->apiResponse('Something went wrong.', 500, $e->getMessage());
-    }
-}
-/**
- * Format a date string from 'm-d-y' to 'Y-m-d'.
- *
- * @param  string  $date
- * @return string
- */
-private function formatDate(string $date): string
-{
-    return DateTime::createFromFormat('m-d-y', $date)->format('Y-m-d');
-}
-/**
- * Prepare an array of clinical note fields for update.
- *
- * @param  \Illuminate\Http\Request  $request
- * @param  string  $date  The formatted date string.
- * @return array
- */
-private function prepareUpdateData($request, string $date): array
-{
-    return $request->only([
-        'subjective',
-        'chief_complaint',
-        'history_of_present_illness',
-        'current_medications',
-        'diagnosis',
-        'assessments',
-        'plan',
-        'procedures',
-        'medications',
-        'risks_benefits_discussion',
-        'care_plan',
-        'next_follow_up',
-        'next_follow_up_value',
-        'next_follow_up_timeframe',
-        'patient_id',
-    ]) + ['date' => $date];
-}
-
-/**
- * Synchronize labs related to the clinical note.
- *
- * @param  array|null  $labs
- * @param  int  $noteId
- * @return void
- */
-private function syncNoteLabs(?array $labs, int $noteId): void
-{
-    if (is_null($labs)) {
-        return;
+        
+        return $count;
     }
 
-    NoteLab::where('note_id', $noteId)->delete();
-
-    foreach ($labs as $labId) {
-        NoteLab::create([
-            'note_id' => $noteId,
-            'lab_id' => $labId,
-        ]);
+    /**
+     * Get clinical notes count by patient ID
+     */
+    public function getCountByPatient($patientId)
+    {
+        return ClinicalNote::where('patient_id', $patientId)->count();
     }
-}
-
-/**
- * Synchronize medications related to the clinical note.
- *
- * @param  array|null  $medications
- * @param  int  $noteId
- * @return void
- */
-private function syncNoteMedications(?array $medications, int $noteId): void
-{
-    if (empty($medications)) {
-        return;
-    }
-
-    NoteMedication::where('note_id', $noteId)->delete();
-
-    foreach ($medications as $dosageId) {
-        $medicationId = Dose::where('id', $dosageId)->value('medication_id');
-
-        NoteMedication::create([
-            'note_id' => $noteId,
-            'mediction_id' => $medicationId,
-            'dosage_id' => $dosageId,
-        ]);
-    }
-}
-
 }

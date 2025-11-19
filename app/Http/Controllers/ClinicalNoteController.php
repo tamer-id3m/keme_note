@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Services\ClinicalNotes\ClinicalNotesService;
 use App\Http\Requests\ClinicalNotes\ClinicalNotesRequest;
 use App\Http\Requests\ClinicalNotes\UpdateClinicalNotesRequest;
+use App\Http\Middleware\PermissionMiddleware;
 
 class ClinicalNoteController extends Controller
 {
@@ -488,5 +489,78 @@ class ClinicalNoteController extends Controller
     public function shareStatus($id)
     {
         return $this->clinicalNoteService->shareStatus($id);
+    }
+
+
+    public function showInternal($id)
+    {
+        $note = $this->clinicalNoteService->show($id);
+        return response()->json([
+            'data' => $note->getData()->data ?? null
+        ]);
+    }
+
+    public function getByPatientId($patientId)
+    {
+        try {
+            // You'll need to add this method to your ClinicalNotesService
+            $notes = $this->clinicalNoteService->getByPatientId($patientId);
+            return response()->json([
+                'data' => $notes,
+                'count' => $notes->count()
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function getByIds(Request $request)
+    {
+        try {
+            $ids = $request->input('ids', []);
+            // You'll need to add this method to your ClinicalNotesService
+            $notes = $this->clinicalNoteService->getByIds($ids);
+            return response()->json([
+                'data' => $notes
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+     public function deleteByPatientId($patientId)
+    {
+        try {
+            // You'll need to add this method to your ClinicalNotesService
+            $result = $this->clinicalNoteService->deleteByPatientId($patientId);
+            return response()->json([
+                'message' => 'Clinical notes deleted successfully',
+                'deleted_count' => $result
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+
+    public function getCountByPatient($patientId)
+    {
+        try {
+            // You'll need to add this method to your ClinicalNotesService
+            $count = $this->clinicalNoteService->getCountByPatient($patientId);
+            return response()->json([
+                'data' => ['count' => $count]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 }

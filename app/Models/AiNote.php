@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Crypt;
 class AiNote extends Model
 {
     use HasFactory;
+    
 
     // use SoftDeletes;
 
