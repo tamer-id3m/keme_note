@@ -38,5 +38,7 @@ return [
         'url'   => env('USER_SERVICE_URL', 'http://keme_user.test'),
         'token' => env('INTERNAL_API_TOKEN', 'super-secret-shared-token'),
     ],
-
+    'internal' => [
+        'token' => env('INTERNAL_API_TOKEN'),
+    ],
 ];
