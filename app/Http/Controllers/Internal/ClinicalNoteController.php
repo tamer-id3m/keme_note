@@ -12,15 +12,8 @@ class ClinicalNoteController extends Controller
 {
     public function createOrUpdateClinicalNote(Request $request)
     {
-        return $request->all();
         $resource = $request->get('resource');
-        $note = (object) [
-            'id' => $request->get('note_id'),
-            'patient_id' => $request->get('note_patient_id'),
-            'doctor_id' => $request->get('note_doctor_id'),
-            'approval_date' => $request->get('note_approval_date'),
-        ];
-
+        $note = (object) $request->note;
         $parsedData = [
             'subjective' => $request->get('subjective'),
             'chief_complaint' => $request->get('chief_complaint'),
