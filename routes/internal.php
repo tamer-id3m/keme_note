@@ -4,6 +4,7 @@ use App\Http\Clients\UserClient;
 use App\Http\Controllers\ClinicalNoteController;
 use App\Http\Controllers\Internal\ClinicalNoteController as InternalClinicalNoteController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Internal\QueueListController;
 
 Route::prefix("internal")->middleware(['internal'])->group(function () {
     Route::prefix('clinical-notes')->group(function () {
@@ -19,4 +20,10 @@ Route::prefix("internal")->middleware(['internal'])->group(function () {
         Route::post('update-clinical-note', [InternalClinicalNoteController::class, 'createOrUpdateClinicalNote']);
         Route::post('/users/by-role', [UserClient::class, 'getUsersByRole']);
     });
+    Route::post('queue-list', [QueueListController::class, 'queueLists']);
+    Route::post('not-in-progress-queue-list', [QueueListController::class, 'getNotProgressQueueList']);
+    Route::delete('queue-list', [QueueListController::class, 'deleteQueueList']);
+    Route::post('create-queue', [QueueListController::class, 'addQueue']);
+    Route::post('edit-queue-status', [QueueListController::class, 'editQueueStatus']);
+    Route::post('delete-create-queue', [QueueListController::class, 'deleteCreateQueue']);
 });

@@ -17,6 +17,8 @@ return new class extends Migration
             $table->unsignedBigInteger('note_id')->nullable();
             $table->string(column: 'type')->nullable();
             $table->unsignedBigInteger(column: 'user_id');
+            $table->string(column: 'model_name')->nullable();
+
             $table->timestamps();
         });
     }
