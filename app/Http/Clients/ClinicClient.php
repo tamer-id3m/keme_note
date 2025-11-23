@@ -167,4 +167,16 @@ class ClinicClient
             return [];
         }
     }
+
+
+    public function getClinicTimezone($clinicId)
+    {
+        try {
+            $clinic = $this->getClinicById($clinicId);
+            return $clinic->time_zone ?? null;
+        } catch (\Exception $e) {
+            logger()->error("ClinicClient getClinicTimezone error: " . $e->getMessage());
+            return null;
+        }
+    }
 }

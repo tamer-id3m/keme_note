@@ -150,7 +150,6 @@ class UserClient
         }
     }
 
-    // ========== EXISTING METHODS (Keep all your current methods) ==========
 
     public function hasPermission($permission)
     {
@@ -384,6 +383,29 @@ class UserClient
         } catch (\Exception $e) {
             logger()->error("UserClient updatePatientDoctor error: " . $e->getMessage());
             return ['error' => $e->getMessage()];
+        }
+    }
+
+
+       public function getUsersByRole($roleName)
+    {
+        try {
+            $response = Http::withHeaders([
+                'X-Internal-Token' => env('INTERNAL_API_TOKEN'),
+                'Accept' => 'application/json',
+            ])->post($this->baseUrl . "/internal/users/by-role", [
+                'role' => $roleName
+            ]);
+
+            if ($response->successful() && isset($response['data'])) {
+                return collect($response['data'])->map(function ($item) {
+                    return (object) $item;
+                });
+            }
+            return collect();
+        } catch (\Exception $e) {
+            logger()->error("UserClient getUsersByRole error: " . $e->getMessage());
+            return collect();
         }
     }
 }

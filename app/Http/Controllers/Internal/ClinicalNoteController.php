@@ -77,4 +77,6 @@ class ClinicalNoteController extends Controller
 
         return ['value' => $value, 'timeframe' => $timeframe];
     }
+
+    
 }

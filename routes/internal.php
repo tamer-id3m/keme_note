@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Clients\UserClient;
 use App\Http\Controllers\ClinicalNoteController;
 use App\Http\Controllers\Internal\ClinicalNoteController as InternalClinicalNoteController;
 use Illuminate\Support\Facades\Route;
@@ -16,5 +17,6 @@ Route::prefix("internal")->middleware(['internal'])->group(function () {
 
         Route::get('/patient/{patientId}/count', [ClinicalNoteController::class, 'getCountByPatient']);
         Route::post('update-clinical-note', [InternalClinicalNoteController::class, 'createOrUpdateClinicalNote']);
+        Route::post('/users/by-role', [UserClient::class, 'getUsersByRole']);
     });
 });

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services\V4\Notification;
+namespace App\Services\Notification;
 
 use App\Notifications\MentionNotification;
 use App\Traits\ApiResponseTrait;
