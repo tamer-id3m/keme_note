@@ -4,6 +4,7 @@ use App\Http\Controllers\ClinicalNoteController;
 use App\Http\Controllers\InternalNoteCommentController;
 use App\Http\Controllers\InternalNotecommentHistoryController;
 use App\Http\Controllers\V4\InternalNoteController;
+use App\Http\Controllers\V4\InternalNoteHistoryController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth:api'])->group(function () {
@@ -38,6 +39,9 @@ Route::middleware(['auth:api'])->group(function () {
         Route::delete('/delete/{id}', [InternalNoteController::class, 'destroy'])
         ->name('internal-notes.destroy');
         Route::get('/history/{internal_note_id}', [InternalNoteController::class, 'history'])
+        ->name('internal-notes.history');
+
+        Route::get('/history/{internal_note_id}', InternalNoteHistoryController::class)
         ->name('internal-notes.history');
     });
 
