@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use App\Jobs\ProcessOnDemandSmartNote;
 use Elastic\ScoutDriverPlus\Support\Query;
-use App\Services\V4\AiNote\AiNoteServiceInterface;
+use App\Services\AiNote\AiNoteServiceInterface;
 use Elastic\ScoutDriverPlus\Builders\BoolQueryBuilder;
 use App\Http\Resources\OnDemandSmartNote\OnDemandSmartNoteResource;
 
