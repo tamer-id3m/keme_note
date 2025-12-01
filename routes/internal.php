@@ -26,4 +26,8 @@ Route::prefix("internal")->middleware(['internal'])->group(function () {
     Route::post('create-queue', [QueueListController::class, 'addQueue']);
     Route::post('edit-queue-status', [QueueListController::class, 'editQueueStatus']);
     Route::post('delete-create-queue', [QueueListController::class, 'deleteCreateQueue']);
+    Route::get('/note-queue-list-bulk', [QueueListController::class, 'bulkQueueListTypes']);
+    Route::delete('/note-queue-list-delete/{id}/{model}', [QueueListController::class, 'queueSyncDelete']);
+    Route::post('/note-queue-sync', [QueueListController::class, 'queueSync']);
+
 });

@@ -30,6 +30,85 @@ class QueueListController extends Controller
         return $this->successResponse('Not in progress queue lists fetched successfully', $queueLists);
     }
 
+    public function bulkQueueListTypes(Request $request)
+    {
+        $noteIds = $request->input('nid', []);
+        $model   = $request->input('model', 'fake');
+
+        
+        $bulk = QueueList::whereIn('note_id', $noteIds)
+            ->where('model_name', $model)
+            ->latest()
+            ->groupBy('note_id')
+            ->get()
+            ->toArray();
+        
+        return response()->json(['data' => $bulk]);
+        
+    }
+    public function queueList(Request $request)
+    {
+        $noteId = $request->input('nid', 0);
+        $modelName = $request->input('model', 'fake');
+    
+        $queue =QueueList::where(
+            [
+                'note_id' => $noteId,
+                'model_name' => $modelName
+            ])
+            ->latest()
+            ->first();
+    
+        return response()->json(['data' => $queue]);
+    }
+
+    public function queueSyncDelete($id , $model)
+    {
+        $deleted = QueueList::where('note_id', $id)->where('model_name' , $model)->delete();
+
+        return response()->json(['data' => ['delete' =>   (bool) $deleted ]]);
+    }
+
+    public function queueSync(Request $request)
+    {
+        $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
+            'note_id'    => 'required|integer',
+            'user_id'    => 'required|integer',
+            'model_name' => 'required|string',
+            'type'       => 'required|string',
+        ]);
+    
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => 'note-error',
+                'errors' => $validator->errors(),
+                'data' => null,
+            ], 422);
+        }
+    
+        $payload = [
+            'note_id'    => $request->note_id,
+            'user_id'    => $request->user_id,
+            'model_name' => $request->model_name,
+            'type'       => $request->type,
+            'updated_at' => now(),
+        ];
+    
+        $queue_list =  QueueList::updateOrCreate(
+            [
+                'note_id'    => $request->note_id,
+                'user_id'    => $request->user_id,
+                'model_name' => $request->model_name,
+            ],
+            $payload
+        );
+    
+
+        return response()->json(['data' => $queue_list]);
+    }
+    
+    
+
     public function deleteQueueList(Request $request)
     {
         QueueList::where("note_id", $request->note_id)->where("model_name", $request->model_name)->delete();
