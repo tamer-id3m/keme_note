@@ -6,7 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\OnDemandSmartNote\NoteApproveRequest;
-use App\Services\V4\OnDemandSmartNote\OnDemandSmartNoteService;
+use App\Services\OnDemandSmartNote\OnDemandSmartNoteService;
 use App\Http\Requests\OnDemandSmartNote\CreateOnDemandSmartNoteRequest;
 use App\Http\Requests\OnDemandSmartNote\UpdateOnDemandSmartNoteRequest;
 

@@ -1,14 +1,16 @@
 <?php
 
-namespace App\Services\V4\ProviderRequest;
+namespace App\Services\ProviderRequest;
 
 use App\Helpers\Helpers;
-use App\Http\Resources\V4\ProviderRequest\ProviderRequestHistoryResource;
-use App\Http\Resources\V4\ProviderRequest\ProviderRequestResource;
+use App\Http\Clients\ClinicClient;
+use App\Http\Clients\UserClient;
+use App\Http\Resources\ProviderRequest\ProviderRequestHistoryResource;
+use App\Http\Resources\ProviderRequest\ProviderRequestResource;
 use App\Models\Clinics;
 use App\Models\User;
-use App\Models\v3\ProviderRequest;
-use App\Models\v3\ProviderRequestHistory;
+use App\Models\ProviderRequest;
+use App\Models\ProviderRequestHistory;
 use App\Traits\ApiResponseTrait;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -214,38 +216,73 @@ class ProviderRequestService
      *                                       - Unauthorized: Returns a 403 response if the user lacks permission to view the users.
      *                                       - Not Found: Returns a 404 response if the clinic with the given UUID does not exist.
      */
-    public function noteMention($id)
-    {
-        $user = Auth::user();
-        $clinic = Clinics::where('uuid', $id)->firstOrFail();
-
-        $query = User::role(['Doctor', 'Pcm'])
-            ->where('clinic_id', $clinic->id)
-            ->select('id', 'uuid', 'name', 'username', 'email', 'last_seen', 'photo');
-
-        if ($mentionedUserId = request('mentionedUserId')) {
-            $query->where('id', $mentionedUserId);
-        } elseif ($mentionedUsername = request('mentionedUsername')) {
-            $query->where('username', $mentionedUsername);
-        } else {
-            $this->filterByRole($query, $user);
-        }
-
-        $data = $query->get()->map(function ($user) {
-            return [
-                'uuid' => $user->uuid,
-                'name' => $user->name,
-                'username' => $user->username,
-                'email' => $user->email,
-                'last_seen' => $user->last_seen,
-                'photo' => $user->photo,
-                'role_name' => optional($user->roles->first())->name,
-                'is_online' => $this->isUserOnline($user->last_seen),
-            ];
-        });
-
-        return $this->apiResponse('success', 200, $data);
+public function noteMention($uuid, UserClient $userClient, ClinicClient $clinicClient)
+{
+    $authUser = $userClient->authUser();
+    if (!$authUser) {
+        return $this->apiResponse("Unauthorized", 401);
     }
+
+    $clinic = $clinicClient->getClinicByUuid($uuid);
+    if (!$clinic) {
+        return $this->apiResponse("Clinic not found", 404);
+    }
+
+    $mentionedUserId = request('mentionedUserId');
+    $mentionedUsername = request('mentionedUsername');
+
+    $staff = $userClient->getUsersByClinicId($clinic->id);
+
+    if ($staff->isEmpty()) {
+        return $this->apiResponse("No users found", 200, []);
+    }
+
+    if ($mentionedUserId) {
+        $staff = $staff->where('id', $mentionedUserId);
+    } elseif ($mentionedUsername) {
+        $staff = $staff->where('username', $mentionedUsername);
+    } else {
+        $staff = $this->filterByRoleMicroservice($staff, $authUser);
+    }
+
+    if ($staff->isEmpty()) {
+        return $this->apiResponse("No matching users", 200, []);
+    }
+
+    $roleResponse = $userClient->getUsersRoles($staff->pluck('id')->toArray());
+    $rolesById = collect($roleResponse)->keyBy('user_id');
+
+    $data = $staff->map(function ($user) use ($rolesById) {
+        $role = $rolesById[$user->id]['roles'][0] ?? null;
+
+        return [
+            'uuid' => $user->uuid,
+            'name' => $user->name,
+            'username' => $user->username,
+            'email' => $user->email,
+            'last_seen' => $user->last_seen ?? null,
+            'photo' => $user->photo ?? null,
+            'role_name' => $role,
+            'is_online' => $this->isUserOnline($user->last_seen ?? null),
+        ];
+    });
+
+    return $this->apiResponse('success', 200, $data);
+}
+
+private function filterByRoleMicroservice($collection, $authUser)
+{
+    if (in_array("Doctor", $authUser->roles)) {
+        return $collection->filter(fn ($u) => in_array("Pcm", $u->roles ?? []));
+    }
+
+    if (in_array("Pcm", $authUser->roles)) {
+        return $collection->filter(fn ($u) => in_array("Doctor", $u->roles ?? []));
+    }
+
+    return $collection; 
+}
+
 
     /**
      * Check if a user is online based on their last seen timestamp.

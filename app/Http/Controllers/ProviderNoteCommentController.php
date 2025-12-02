@@ -5,7 +5,7 @@ namespace App\Http\Controllers\V4;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ProviderNote\ProviderNoteComment\CreateProviderNoteCommentRequest;
 use App\Http\Requests\ProviderNote\ProviderNoteComment\UpdateProviderNoteCommentRequest;
-use App\Services\V4\ProviderNote\ProviderNoteCommentService;
+use App\Services\ProviderNote\ProviderNoteCommentService;
 use App\Traits\ApiResponseTrait;
 
 class ProviderNoteCommentController extends Controller

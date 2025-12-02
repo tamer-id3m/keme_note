@@ -3,6 +3,12 @@
 use App\Http\Controllers\ClinicalNoteController;
 use App\Http\Controllers\InternalNoteCommentController;
 use App\Http\Controllers\InternalNotecommentHistoryController;
+use App\Http\Controllers\V4\InternalNoteController;
+use App\Http\Controllers\V4\InternalNoteHistoryController;
+use App\Http\Controllers\V4\OnDemandSmartNoteController;
+use App\Http\Controllers\V4\PatientNotesController;
+use App\Http\Controllers\V4\ProviderNoteCommentController;
+use App\Http\Controllers\V4\ProviderRequestCommentHistoryController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth:api'])->group(function () {
@@ -22,5 +28,54 @@ Route::middleware(['auth:api'])->group(function () {
         Route::delete('/{note_id}/{comment_id}', [InternalNoteCommentController::class, 'destroy']);
         Route::get('note-comments/{commentId}/history', InternalNotecommentHistoryController::class);
     });
+
+    Route::prefix('/internal-notes')->group(function () {
+    Route::get('/index/{id}', [InternalNoteController::class, 'index'])
+        ->name('internal-notes.index');
+    
+     Route::post('/store', [InternalNoteController::class, 'store'])
+        ->name('internal-notes.store');
+        Route::get('/show/{id}', [InternalNoteController::class, 'show'])
+        ->name('internal-notes.show');
+    
+     Route::put('/update/{id}', [InternalNoteController::class, 'update'])
+        ->name('internal-notes.update');
+        Route::delete('/delete/{id}', [InternalNoteController::class, 'destroy'])
+        ->name('internal-notes.destroy');
+        Route::get('/history/{internal_note_id}', [InternalNoteController::class, 'history'])
+        ->name('internal-notes.history');
+
+        Route::get('/history/{internal_note_id}', InternalNoteHistoryController::class)
+        ->name('internal-notes.history');
+    });
+    Route::prefix('/smart-note')->group(function () {
+        Route::get('/index', [OnDemandSmartNoteController::class, 'index'])
+            ->name('smart-note.index');   
+        Route::get('/show/{id}', [OnDemandSmartNoteController::class, 'show'])
+            ->name('smart-note.index');   
+
+        Route::post('/store', [OnDemandSmartNoteController::class, 'store'])
+            ->name('smart-note.store');
+    });
+    Route::prefix('/patient-notes')->group(function () {
+        Route::get('/', [PatientNotesController::class, 'index'])
+            ->name('patient-note.index');   
+    });
+    Route::prefix('/provider-note-comment')->group(function () {
+        Route::get('/', [ProviderNoteCommentController::class, 'index'])
+            ->name('patient-note.index');
+        Route::get('/{id}', [ProviderNoteCommentController::class, 'show'])
+            ->name('provider-note-comment.show');
+        Route::post('/', [ProviderNoteCommentController::class, 'store'])
+            ->name('provider-note-comment.store');
+        Route::put('/{id}', [ProviderNoteCommentController::class, 'update'])
+            ->name('provider-note-comment.store');
+        Route::delete('/{id}', [ProviderNoteCommentController::class, 'destroy'])
+            ->name('provider-note-comment.destroy');
+        Route::get('/provider-request-comments/history/{commentId}', ProviderRequestCommentHistoryController::class);
+    });
+    
+
+
 
 });

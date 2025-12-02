@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\V4;
 
 use App\Http\Controllers\Controller;
-use App\Services\V4\ProviderNote\ProviderNoteCommentService;
+use App\Services\ProviderNote\ProviderNoteCommentService;
 use App\Traits\ApiResponseTrait;
 use Illuminate\Http\Request;
 

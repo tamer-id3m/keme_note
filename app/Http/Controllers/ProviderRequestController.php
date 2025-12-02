@@ -1,11 +1,11 @@
 <?php
 
-namespace App\Http\Controllers\V4;
+namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ProviderRequest\ProviderRequest\StoreProviderRequest;
 use App\Http\Requests\ProviderRequest\ProviderRequest\UpdateProviderRequest;
-use App\Services\V4\ProviderRequest\ProviderRequestService;
+use App\Services\ProviderRequest\ProviderRequestService;
 use App\Traits\ApiResponseTrait;
 use Illuminate\Http\Request;
 
