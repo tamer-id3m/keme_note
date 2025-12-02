@@ -2,6 +2,7 @@
 
 namespace App\Services\ProviderNote;
 
+use App\Http\Clients\UserClient;
 use App\Http\Resources\ProviderNote\ProviderCommentHistoryResource;
 use App\Http\Resources\ProviderNote\ProviderNoteCommentResource;
 use App\Models\ProviderNoteComment;
@@ -25,9 +26,8 @@ class ProviderNoteCommentService
 
     protected $notifyUserService;
 
-    public function __construct(NotifyUserService $notifyUserService)
+    public function __construct(NotifyUserService $notifyUserService , protected UserClient $userClient)
     {
-
         $this->notifyUserService = $notifyUserService;
     }
 
@@ -78,76 +78,79 @@ class ProviderNoteCommentService
      *                                       - Validation Error: Returns a 422 response if validation fails.
      *                                       - Error: Returns a 500 response for any unexpected exceptions during processing.
      */
-    public function store($request)
-    {
-        $validatedData = $request->validated();
-        $user = Auth::user();
+   public function store($request)
+{
+    $validated = $request->validated();
 
-        // Create the provider note comment for all roles
-        $comment = ProviderNoteComment::create($validatedData);
+    $authUser = $this->userClient->authUser();
+    if (!$authUser) {
+        return $this->ApiResponse('Unauthorized', 401);
+    }
 
-        // Notify PCMs if the user is a Doctor
-        if ($user->hasRole('Doctor')) {
-            $doctor_id = $user->id;
-            $fullName = $user->name . ' ' . ($user->last_name ?? '');
-            $pcms = User::role('Pcm')->where('doctor_id', $doctor_id)->get();
-            $patient = User::role('Patient')->where('id', $validatedData['patient_id'])->first();
+    $comment = ProviderNoteComment::create($validated);
 
-            foreach ($pcms as $pcm) {
-                $this->notifyUserService->notifyUser(
-                    $pcm,
-                    $user->id,
-                    'You have been mentioned in a note',
-                    "$fullName added New Provider Request comment",
-                    'request',
-                    $comment->user_id,
-                    $comment->provider_note_id,
-                    $patient->uuid
-                );
-            }
-        }
+    $fullName = trim($authUser->name . ' ' . ($authUser->last_name ?? ''));
 
-        // Notify the doctor if the user is a PCM
-        if ($user->hasRole('Pcm')) {
-            $providerNote = ProviderNote::find($request->provider_note_id);
-            $noteDoctorId = $providerNote->doctor_id;
-            $doctorIds = $user->pcmDoctors->pluck('id')->toArray();
-            if (in_array($noteDoctorId, $doctorIds)) {
-                $fullName = $user->name . ' ' . ($user->last_name ?? '');
-                $doctor = User::role('Doctor')->where('id', $noteDoctorId)->first();
-                $patient = User::role('Patient')->where('id', $validatedData['patient_id'])->first();
+    $patient = $this->userClient->getUserById($validated['patient_id']);
+    if (in_array('Doctor', $authUser->roles ?? [])) {
 
-                $this->notifyUserService->notifyUser(
-                    $doctor,
-                    $user->id,
-                    'You have been mentioned in a note',
-                    "$fullName added New Provider Request comment",
-                    'request',
-                    $comment->user_id,
-                    $comment->provider_note_id,
-                    $patient->uuid
-                );
-            }
-        }
-        $admins = User::role('Admin')->get();
-        $fullName = $user->name . ' ' . ($user->last_name ?? '');
-        $patient = User::role('Patient')->where('id', $validatedData['patient_id'])->first();
+        $pcms = $this->userClient->getUsersByRole('Pcm')
+            ->filter(fn($pcm) => $pcm->doctor_id == $authUser->id);
 
-        foreach ($admins as $admin) {
+        foreach ($pcms as $pcm) {
             $this->notifyUserService->notifyUser(
-                $admin,
-                $user->id,
+                $pcm,
+                $authUser->id,
                 'You have been mentioned in a note',
-                "$fullName added New Provider Request comment",
+                "$fullName added a new provider note comment",
                 'request',
                 $comment->user_id,
                 $comment->provider_note_id,
-                $patient->uuid
+                $patient->uuid ?? null
             );
         }
-
-        return $this->ApiResponse('Added Successfully', 201, new ProviderNoteCommentResource($comment));
     }
+    if (in_array('Pcm', $authUser->roles ?? [])) {
+
+        $providerNote = ProviderNote::find($validated['provider_note_id']);
+        $noteDoctorId = $providerNote->doctor_id;
+
+        $pcmDoctors = $this->userClient->getUsersByIds($authUser->doctor_ids ?? []);
+
+        if ($pcmDoctors->pluck('id')->contains($noteDoctorId)) {
+
+            $doctor = $this->userClient->getUserById($noteDoctorId);
+
+            $this->notifyUserService->notifyUser(
+                $doctor,
+                $authUser->id,
+                'You have been mentioned in a note',
+                "$fullName added a new provider note comment",
+                'request',
+                $comment->user_id,
+                $comment->provider_note_id,
+                $patient->uuid ?? null
+            );
+        }
+    }
+    $admins = $this->userClient->getUsersByRole('Admin');
+
+    foreach ($admins as $admin) {
+        $this->notifyUserService->notifyUser(
+            $admin,
+            $authUser->id,
+            'You have been mentioned in a note',
+            "$fullName added a new provider note comment",
+            'request',
+            $comment->user_id,
+            $comment->provider_note_id,
+            $patient->uuid ?? null
+        );
+    }
+
+    return $this->ApiResponse('Added Successfully', 201, new ProviderNoteCommentResource($comment));
+}
+
 
     /**
      * Update an existing provider note comment.

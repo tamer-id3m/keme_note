@@ -2,7 +2,7 @@
 
 namespace App\Services\ProviderRequest;
 
-use App\Http\Resources\ProviderRequestCommentHistoryResource;
+use App\Http\Resources\ProviderRequest\ProviderRequestCommentHistoryResource;
 use App\Http\Resources\ProviderRequest\ProviderRequestCommentResource;
 use App\Models\ProviderRequestComment;
 use App\Models\ProviderRequestCommentHistory;

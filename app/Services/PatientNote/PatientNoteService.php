@@ -2,6 +2,7 @@
 
 namespace App\Services\V4\PatientNote;
 
+use App\Http\Clients\UserClient;
 use App\Models\User;
 use App\Enums\RoleType;
 use App\Helpers\Helpers;
@@ -97,8 +98,9 @@ use ApiResponseTrait;
  *
  * @return \App\Models\User|null Returns the user instance if found and has the expected role; otherwise null.
  */
-    private function getUserByUuid(string $uuid): ?User
+    private function getUserByUuid(string $uuid)
     {
+    $authUser = app(UserClient::class)->authUser();
         return User::where('uuid', $uuid)
             ->whereHas('roles', fn($q) => $q->whereIn('name', ['Patient', 'Parent', 'Staff', 'Pcm', 'Doctor']))
             ->first();

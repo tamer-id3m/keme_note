@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\V3;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\V3\StaffNote\CreateStaffNoteRequest;
-use App\Http\Requests\V3\StaffNote\UpdateStaffNoteRequest;
+use App\Http\Requests\StaffNote\CreateStaffNoteRequest;
+use App\Http\Requests\StaffNote\UpdateStaffNoteRequest;
 use App\Services\StaffNote\StaffNoteService;
 use App\Traits\ApiResponseTrait;
 use Illuminate\Http\Request;
