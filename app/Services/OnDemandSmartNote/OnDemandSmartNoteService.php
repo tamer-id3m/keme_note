@@ -2,6 +2,7 @@
 
 namespace App\Services\OnDemandSmartNote;
 
+use App\Http\Clients\UserClient;
 use App\Models\User;
 use App\Helpers\Helpers;
 use App\Enums\QueueStatus;
@@ -405,37 +406,57 @@ class OnDemandSmartNoteService
      *
      * @return \Illuminate\Http\JsonResponse JSON response containing user-specific queue order data.
      */
-    public function getUserQueueOrders(): JsonResponse
-    {
-        $allQueues = QueueList::whereIn("type", [QueueStatus::QUEUED->value, QueueStatus::IN_PROGRESS->value])->get();
-        $user = User::with("queuesList.onDemandSmartNote")->find(Auth::id());
+   public function getUserQueueOrders(): JsonResponse
+{
+    $authUser = app(UserClient::class)->authUser();
 
-        $userOrders = [];
-        foreach ($user->queuesList as $userQueue) {
-            $noteId = '';
-            $noteName = '';
+    if (!$authUser || !isset($authUser->id)) {
+        return $this->ApiResponse('Unauthenticated', 401);
+    }
 
-            if ($userQueue->onDemandSmartNote) {
-                $noteId = $userQueue->onDemandSmartNote->id;
-                $noteName = $userQueue->onDemandSmartNote->note;
-            } elseif ($userQueue->publicAppointmentSummary) {
-                $noteId = $userQueue->publicAppointmentSummary->id;
-                $noteName = $userQueue->publicAppointmentSummary->patient_name;
-            }
+    // All queues currently active
+    $allQueues = QueueList::whereIn("type", [
+        QueueStatus::QUEUED->value,
+        QueueStatus::IN_PROGRESS->value
+    ])->get();
 
-            $userOrders[] = [
-                'note'          => ["id" => $noteId, "name" => $noteName],
-                "status"        => $userQueue->type,
-                'order'         => $this->getUserOrder($allQueues, $userQueue),
-                'total'         => count($allQueues),
-                "queue_list_id" => $userQueue->id,
-            ];
+    // Fetch queues for this user (from this service DB)
+    $userQueues = QueueList::with([
+        "onDemandSmartNote",
+        "publicAppointmentSummary"
+    ])->where("user_id", $authUser->id)->get();
+
+    $userOrders = [];
+
+    foreach ($userQueues as $queue) {
+        $noteId = null;
+        $noteName = null;
+
+        if ($queue->onDemandSmartNote) {
+            $noteId   = $queue->onDemandSmartNote->id;
+            $noteName = $queue->onDemandSmartNote->note;
+        } elseif ($queue->publicAppointmentSummary) {
+            $noteId   = $queue->publicAppointmentSummary->id;
+            $noteName = $queue->publicAppointmentSummary->patient_name;
         }
 
-        $userOrders = collect($userOrders)->sortBy('order')->values()->toArray();
-
-        return $this->ApiResponse('success', 200, $userOrders);
+        $userOrders[] = [
+            'note' => [
+                'id'   => $noteId,
+                'name' => $noteName,
+            ],
+            "status"        => $queue->type,
+            'order'         => $this->getUserOrder($allQueues, $queue),
+            'total'         => $allQueues->count(),
+            "queue_list_id" => $queue->id,
+        ];
     }
+
+    $userOrders = collect($userOrders)->sortBy('order')->values()->toArray();
+
+    return $this->ApiResponse('success', 200, $userOrders);
+}
+
 
     /**
      * Build and execute an Elasticsearch query to retrieve note IDs for a specific patient and user.

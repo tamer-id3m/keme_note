@@ -2,7 +2,7 @@
 
 namespace App\Http\Resources\OnDemandSmartNote;
 
-use App\Models\v3\Context;
+use App\Models\Context;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 

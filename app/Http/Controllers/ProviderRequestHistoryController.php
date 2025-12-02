@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\V4;
 
 use App\Http\Controllers\Controller;
-use App\Services\V4\ProviderRequest\ProviderRequestService;
+use App\Services\ProviderRequest\ProviderRequestService;
 use App\Traits\ApiResponseTrait;
 
 class ProviderRequestHistoryController extends Controller

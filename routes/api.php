@@ -5,6 +5,10 @@ use App\Http\Controllers\InternalNoteCommentController;
 use App\Http\Controllers\InternalNotecommentHistoryController;
 use App\Http\Controllers\V4\InternalNoteController;
 use App\Http\Controllers\V4\InternalNoteHistoryController;
+use App\Http\Controllers\V4\OnDemandSmartNoteController;
+use App\Http\Controllers\V4\PatientNotesController;
+use App\Http\Controllers\V4\ProviderNoteCommentController;
+use App\Http\Controllers\V4\ProviderRequestCommentHistoryController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth:api'])->group(function () {
@@ -44,5 +48,34 @@ Route::middleware(['auth:api'])->group(function () {
         Route::get('/history/{internal_note_id}', InternalNoteHistoryController::class)
         ->name('internal-notes.history');
     });
+    Route::prefix('/smart-note')->group(function () {
+        Route::get('/index', [OnDemandSmartNoteController::class, 'index'])
+            ->name('smart-note.index');   
+        Route::get('/show/{id}', [OnDemandSmartNoteController::class, 'show'])
+            ->name('smart-note.index');   
+
+        Route::post('/store', [OnDemandSmartNoteController::class, 'store'])
+            ->name('smart-note.store');
+    });
+    Route::prefix('/patient-notes')->group(function () {
+        Route::get('/', [PatientNotesController::class, 'index'])
+            ->name('patient-note.index');   
+    });
+    Route::prefix('/provider-note-comment')->group(function () {
+        Route::get('/', [ProviderNoteCommentController::class, 'index'])
+            ->name('patient-note.index');
+        Route::get('/{id}', [ProviderNoteCommentController::class, 'show'])
+            ->name('provider-note-comment.show');
+        Route::post('/', [ProviderNoteCommentController::class, 'store'])
+            ->name('provider-note-comment.store');
+        Route::put('/{id}', [ProviderNoteCommentController::class, 'update'])
+            ->name('provider-note-comment.store');
+        Route::delete('/{id}', [ProviderNoteCommentController::class, 'destroy'])
+            ->name('provider-note-comment.destroy');
+        Route::get('/provider-request-comments/history/{commentId}', ProviderRequestCommentHistoryController::class);
+    });
+    
+
+
 
 });
