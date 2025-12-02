@@ -10,6 +10,13 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 class QueueList extends Model
 {
     use HasFactory;
+    protected $fillable = [
+        'note_id',
+        'user_id',
+        'model_name',
+        'type',
+    ];
+
     
     public function onDemandSmartNote(): BelongsTo
     {
