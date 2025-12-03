@@ -3,6 +3,7 @@
 use App\Http\Controllers\ClinicalNoteController;
 use App\Http\Controllers\InternalNoteCommentController;
 use App\Http\Controllers\InternalNotecommentHistoryController;
+use App\Http\Controllers\ProviderNoteController;
 use App\Http\Controllers\V4\InternalNoteController;
 use App\Http\Controllers\V4\InternalNoteHistoryController;
 use App\Http\Controllers\V4\OnDemandSmartNoteController;
@@ -73,6 +74,20 @@ Route::middleware(['auth:api'])->group(function () {
         Route::delete('/{id}', [ProviderNoteCommentController::class, 'destroy'])
             ->name('provider-note-comment.destroy');
         Route::get('/provider-request-comments/history/{commentId}', ProviderRequestCommentHistoryController::class);
+    });
+
+    
+    Route::prefix('/provider-note')->group(function () {
+        Route::get('/', action: [ProviderNoteController::class, 'index'])
+            ->name('provider-note.index');
+        Route::post('/', [ProviderNoteController::class, 'store'])
+            ->name('provider-note.store');
+        Route::get('/{id}', [ProviderNoteController::class, 'show'])
+            ->name('provider-note.show');
+        Route::put('/{id}', [ProviderNoteController::class, 'update'])
+            ->name('provider-note.update');
+        Route::delete('/{id}', [ProviderNoteController::class, 'destroy'])
+            ->name('provider-note.destroy');
     });
     
 

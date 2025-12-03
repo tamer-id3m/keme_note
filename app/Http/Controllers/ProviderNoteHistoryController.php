@@ -1,9 +1,9 @@
 <?php
 
-namespace App\Http\Controllers\V4;
+namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
-use App\Services\V4\ProviderNote\ProviderNoteService;
+use App\Services\ProviderNote\ProviderNoteService;
 use App\Traits\ApiResponseTrait;
 use Illuminate\Http\Request;
 

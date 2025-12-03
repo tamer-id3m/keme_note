@@ -1,11 +1,11 @@
 <?php
 
-namespace App\Http\Controllers\V4;
+namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ProviderNote\ProviderNote\StoreProviderNoteRequest;
 use App\Http\Requests\ProviderNote\ProviderNote\UpdateProviderNoteRequest;
-use App\Services\V4\ProviderNote\ProviderNoteService;
+use App\Services\ProviderNote\ProviderNoteService;
 use Illuminate\Http\Request;
 /**
  * @OA\Schema(
@@ -254,33 +254,5 @@ class ProviderNoteController extends Controller
     public function destroy($id)
     {
         return $this->providerNoteService->destroy($id);
-    }
-
-    /**
-     * @OA\Get(
-     *     path="/api/v4/provider-notes/mention/{clinicId}",
-     *     summary="Get users available for mentions",
-     *     tags={"Provider Notes"},
-     *     security={{"bearerAuth":{}}},
-     *     @OA\Parameter(name="clinicId", in="path", required=true, @OA\Schema(type="integer")),
-     *     @OA\Parameter(name="mentionedUserId", in="query", required=false, @OA\Schema(type="integer")),
-     *     @OA\Parameter(name="mentionedUsername", in="query", required=false, @OA\Schema(type="string")),
-     *     @OA\Response(
-     *         response=200,
-     *         description="Success",
-     *         @OA\JsonContent(
-     *             type="array",
-     *             @OA\Items(
-     *                 @OA\Property(property="id", type="integer", example=12),
-     *                 @OA\Property(property="name", type="string", example="Dr. John Smith"),
-     *                 @OA\Property(property="email", type="string", example="dr.john@example.com")
-     *             )
-     *         )
-     *     )
-     * )
-     */
-    public function noteMention($id)
-    {
-        return $this->providerNoteService->noteMention($id);
     }
 }
